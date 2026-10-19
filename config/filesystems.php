@@ -37,6 +37,12 @@ return [
             'throw' => false,
             'report' => false,
         ],
+       'secure' => [
+            'driver' => 'local',
+            'root' => storage_path('app/secure'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
 
         'public' => [
             'driver' => 'local',

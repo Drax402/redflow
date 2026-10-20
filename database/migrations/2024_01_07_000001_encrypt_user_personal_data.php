@@ -24,6 +24,21 @@ return new class extends Migration
         }
     }
 
+    /** MySQL cannot keep a normal index on a TEXT column, so drop any index on it first. */
+    private function dropIndexesOn(string $table, string $column): void
+    {
+        $rows = DB::select(
+            "SELECT DISTINCT INDEX_NAME AS idx FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND INDEX_NAME <> 'PRIMARY'",
+            [$table, $column]
+        );
+        foreach ($rows as $row) {
+            try {
+                DB::statement("ALTER TABLE `{$table}` DROP INDEX `{$row->idx}`");
+            } catch (\Throwable $e) {
+            }
+        }
+    }
+
     public function up(): void
     {
         $driver = DB::getDriverName();
@@ -36,6 +51,7 @@ return new class extends Migration
 
             foreach ($columns as $column) {
                 if (in_array($driver, ['mysql', 'mariadb'])) {
+                    $this->dropIndexesOn($table, $column);
                     $null = ($table === 'users' && $column === 'name') || ($table === 'app_notifications') ? 'NOT NULL' : 'NULL';
                     DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` TEXT {$null}");
                 } elseif ($driver === 'pgsql') {
